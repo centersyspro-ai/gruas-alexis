@@ -272,7 +272,7 @@ function sendWhatsappMessage() {
     // ... validaciones anteriores ...
     
     // Usar el método más confiable: solo abrir chat
-    const businessPhone = '523331234567'; // Tu número aquí
+    const businessPhone = '524427128200'; // Tu número aquí
     
     // Para WhatsApp Web siempre usar wa.me
     const whatsappUrl = `https://wa.me/${businessPhone}`;
