@@ -16,9 +16,11 @@ const customLocationRadio = document.getElementById('customLocation');
 const noLocationRadio = document.getElementById('noLocation');
 const manualLocation = document.getElementById('manualLocation');
 
-// Variables
+// Variables globales para ubicación
 let userLocation = null;
 let userAddress = null;
+let userMapsUrl = null;
+let userCoordinates = null;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -106,7 +108,7 @@ function getUserLocation() {
         return;
     }
     
-    locationText.textContent = 'Obteniendo ubicación...';
+    locationText.innerHTML = '<span class="loading-location">Obteniendo ubicación...</span>';
     
     navigator.geolocation.getCurrentPosition(
         // Éxito
@@ -116,32 +118,77 @@ function getUserLocation() {
             userLocation = { lat, lng };
             
             try {
-                // Obtener dirección en formato coloquial mexicano
-                userAddress = await getMexicanAddress(lat, lng);
-                locationText.textContent = `Ubicación obtenida: ${userAddress}`;
+                // Obtener dirección en formato coloquial mexicano con enlace a Maps
+                const locationData = await getMexicanAddress(lat, lng);
+                userAddress = locationData.text;
+                userMapsUrl = locationData.url;
+                userCoordinates = locationData.coordinates;
+                
+                // Mostrar información con enlace a Google Maps
+                locationText.innerHTML = `
+                    <div class="location-info">
+                        <div class="location-text">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span><strong>Ubicación obtenida:</strong> ${userAddress}</span>
+                        </div>
+                        <div class="location-link">
+                            <a href="${userMapsUrl}" target="_blank" class="maps-link">
+                                <i class="fas fa-external-link-alt"></i> Ver en Google Maps
+                            </a>
+                            <small>Coordenadas: ${userCoordinates}</small>
+                        </div>
+                    </div>
+                `;
                 sendLocationRadio.checked = true;
             } catch (error) {
                 console.error('Error al obtener dirección:', error);
-                locationText.textContent = `Coordenadas obtenidas: ${lat.toFixed(6)}, ${lng.toFixed(6)}. No se pudo obtener dirección específica.`;
+                // Crear enlace de Google Maps con las coordenadas
+                const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
+                userMapsUrl = googleMapsUrl;
+                userCoordinates = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                
+                locationText.innerHTML = `
+                    <div class="location-info">
+                        <div class="location-text">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span><strong>Ubicación:</strong> Coordenadas obtenidas</span>
+                        </div>
+                        <div class="location-link">
+                            <a href="${googleMapsUrl}" target="_blank" class="maps-link">
+                                <i class="fas fa-external-link-alt"></i> Ver en Google Maps
+                            </a>
+                            <small>Coordenadas: ${userCoordinates}</small>
+                        </div>
+                    </div>
+                `;
                 sendLocationRadio.checked = true;
             }
         },
         // Error
         function(error) {
             console.error('Error obteniendo ubicación:', error);
+            let errorMessage = "Error obteniendo ubicación.";
+            
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    locationText.textContent = "Permiso de ubicación denegado. Puede escribir su ubicación manualmente.";
+                    errorMessage = "Permiso de ubicación denegado. Puede escribir su ubicación manualmente.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    locationText.textContent = "Información de ubicación no disponible.";
+                    errorMessage = "Información de ubicación no disponible.";
                     break;
                 case error.TIMEOUT:
-                    locationText.textContent = "Tiempo de espera agotado al obtener la ubicación.";
+                    errorMessage = "Tiempo de espera agotado al obtener la ubicación.";
                     break;
                 default:
-                    locationText.textContent = "Error desconocido al obtener la ubicación.";
+                    errorMessage = "Error desconocido al obtener la ubicación.";
             }
+            
+            locationText.innerHTML = `
+                <div class="location-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${errorMessage}</span>
+                </div>
+            `;
         },
         // Opciones
         {
@@ -165,10 +212,12 @@ async function getMexicanAddress(lat, lng) {
         
         const data = await response.json();
         
+        let mexicanAddress = '';
+        let googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
+        
         if (data && data.address) {
             const address = data.address;
             // Formato coloquial mexicano: calle, colonia, municipio, estado
-            let mexicanAddress = '';
             
             if (address.road) mexicanAddress += address.road;
             if (address.suburb) mexicanAddress += `, ${address.suburb}`;
@@ -180,14 +229,30 @@ async function getMexicanAddress(lat, lng) {
             }
             if (address.state) mexicanAddress += `, ${address.state}`;
             
-            return mexicanAddress || 'Ubicación obtenida, pero no se pudo formatear correctamente';
+            return {
+                text: mexicanAddress || `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+                url: googleMapsUrl,
+                coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+                rawAddress: address
+            };
         } else {
-            return `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            return {
+                text: `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+                url: googleMapsUrl,
+                coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+                rawAddress: null
+            };
         }
     } catch (error) {
         console.error('Error en geocodificación inversa:', error);
         // Fallback a coordenadas simples
-        return `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
+        return {
+            text: `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            url: googleMapsUrl,
+            coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            rawAddress: null
+        };
     }
 }
 
@@ -202,22 +267,38 @@ function sendWhatsappMessage() {
         return;
     }
     
-    // Formatear número de teléfono (eliminar espacios, guiones, etc.)
-    const formattedPhone = userPhone.replace(/\D/g, '');
+    // Validar y formatear teléfono del usuario
+    const formattedUserPhone = formatPhoneForValidation(userPhone);
+    if (!formattedUserPhone) {
+        alert('Por favor ingrese un número de teléfono válido (10 dígitos). Ejemplo: 3331234567');
+        return;
+    }
+    
+    // Número de teléfono del negocio
+    const businessPhone = BUSINESS_CONFIG.whatsappNumber;
     
     // Determinar el texto de ubicación según la opción seleccionada
-    let locationText = '';
+    let locationContent = '';
     
-    if (sendLocationRadio.checked && userAddress) {
-        locationText = `\n📍 Mi ubicación: ${userAddress}`;
+    if (sendLocationRadio.checked && userAddress && userMapsUrl) {
+        // Incluir dirección en texto y enlace a Google Maps
+        locationContent = `\n📍 *Mi ubicación:* ${userAddress}\n🗺️ *Ver en Google Maps:* ${userMapsUrl}`;
+        if (userCoordinates) {
+            locationContent += `\n📌 *Coordenadas:* ${userCoordinates}`;
+        }
     } else if (customLocationRadio.checked && manualLocation.value.trim()) {
-        locationText = `\n📍 Mi ubicación: ${manualLocation.value.trim()}`;
+        // Para ubicación manual, también podemos crear un enlace de búsqueda en Google Maps
+        const manualLocationText = manualLocation.value.trim();
+        const encodedLocation = encodeURIComponent(manualLocationText + ', San Diego de la Unión, Guanajuato');
+        const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+        
+        locationContent = `\n📍 *Mi ubicación:* ${manualLocationText}\n🗺️ *Buscar en Google Maps:* ${mapsSearchUrl}`;
     } else {
-        locationText = '\n📍 No se proporcionó ubicación específica.';
+        locationContent = '\n📍 *Ubicación:* No se proporcionó ubicación específica.';
     }
     
     // Crear mensaje para WhatsApp
-    const whatsappMessage = `Hola, soy *${userName}*. Necesito servicio de grúa.\n\n*Detalles:* ${userMessage}\n\n*Teléfono de contacto:* ${userPhone}${locationText}\n\nEste mensaje fue enviado desde la página web de Grúas Alexis.`;
+    const whatsappMessage = `Hola, soy *${userName}*. Necesito servicio de grúa.\n\n*Detalles del servicio:* ${userMessage}\n\n*Teléfono de contacto:* ${formattedUserPhone}${locationContent}\n\nEste mensaje fue enviado desde la página web de ${BUSINESS_CONFIG.businessName}.`;
     
     // Codificar el mensaje para URL
     const encodedMessage = encodeURIComponent(whatsappMessage);
@@ -226,12 +307,9 @@ function sendWhatsappMessage() {
     const isAndroid = /Android/i.test(navigator.userAgent);
     let whatsappUrl;
     
-    // Número de teléfono de Grúas Alexis (cambiar por el número real)
-    const businessPhone = '524427128200';
-    
     if (isAndroid) {
         // Para Android: usar el esquema intent de WhatsApp
-        whatsappUrl = `whatsapp://send?phone=${businessPhone}&text=${encodedMessage}`;
+        whatsappUrl = `https://wa.me/${businessPhone}?text=${encodedMessage}`;
     } else {
         // Para navegadores web: usar la versión web de WhatsApp
         whatsappUrl = `https://web.whatsapp.com/send?phone=${businessPhone}&text=${encodedMessage}`;
