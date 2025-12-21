@@ -192,6 +192,12 @@ async function getMexicanAddress(lat, lng) {
 }
 
 function sendWhatsappMessage() {
+    // Validar formato del teléfono del usuario
+    if (!isValidMexicanPhone(userPhone)) {
+        alert('Por favor ingrese un número de teléfono mexicano válido (10 dígitos). Ejemplo: 3331234567');
+    return;
+    }
+    
     // Validar formulario
     const userName = document.getElementById('userName').value.trim();
     const userPhone = document.getElementById('userPhone').value.trim();
@@ -227,7 +233,7 @@ function sendWhatsappMessage() {
     let whatsappUrl;
     
     // Número de teléfono de Grúas Alexis (cambiar por el número real)
-    const businessPhone = '5213331234567';
+    const businessPhone = '524427128200';
     
     if (isAndroid) {
         // Para Android: usar el esquema intent de WhatsApp
@@ -260,3 +266,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 2000);
 });
+
+// Alternativa simplificada - solo abre chat sin mensaje predefinido
+function sendWhatsappMessage() {
+    // ... validaciones anteriores ...
+    
+    // Usar el método más confiable: solo abrir chat
+    const businessPhone = '523331234567'; // Tu número aquí
+    
+    // Para WhatsApp Web siempre usar wa.me
+    const whatsappUrl = `https://wa.me/${businessPhone}`;
+    
+    window.open(whatsappUrl, '_blank');
+    
+    // Cerrar modal
+    setTimeout(() => {
+        closeWhatsappModal();
+    }, 500);
+}
+
+// Función para validar número de teléfono mexicano
+function isValidMexicanPhone(phone) {
+    // Limpiar el número
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Para números mexicanos:
+    // - 10 dígitos: 3331234567
+    // - 12 dígitos con código de país: 523331234567
+    // - 13 dígitos con + y código: 5213331234567
+    
+    // Verificar longitud
+    if (cleaned.length === 10) {
+        // Número local de 10 dígitos
+        return /^[0-9]{10}$/.test(cleaned);
+    } else if (cleaned.length === 12) {
+        // Número con código de país (52)
+        return /^52[0-9]{10}$/.test(cleaned);
+    } else if (cleaned.length === 13) {
+        // Número con código de país y prefijo (521)
+        return /^521[0-9]{10}$/.test(cleaned);
+    }
+    
+    return false;
+}
