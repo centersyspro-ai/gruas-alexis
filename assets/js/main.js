@@ -1,3 +1,14 @@
+// ================================
+// CONFIGURACIÓN - DATOS DEL NEGOCIO
+// ================================
+const BUSINESS_CONFIG = {
+    // Número de WhatsApp principal (formato internacional: 52 + 10 dígitos)
+    whatsappNumber: '524427128200', // Número real: 52 442 712 8200
+    
+    // Nombre del negocio
+    businessName: 'Grúas Alexis',
+};
+
 // Elementos del DOM
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
@@ -80,6 +91,18 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         sendWhatsappMessage();
     });
+    
+    // Verificar si FontAwesome está cargado, si no, mostrar el SVG
+    setTimeout(function() {
+        const whatsappIcon = document.querySelector('.whatsapp-font');
+        if (!whatsappIcon || getComputedStyle(whatsappIcon).display === 'none') {
+            // FontAwesome no está cargado, asegurarnos de que el SVG sea visible
+            const whatsappSvg = document.querySelector('.whatsapp-svg');
+            if (whatsappSvg) {
+                whatsappSvg.style.display = 'block';
+            }
+        }
+    }, 2000);
 });
 
 // Funciones
@@ -98,8 +121,29 @@ function resetForm() {
     whatsappForm.reset();
     userLocation = null;
     userAddress = null;
+    userMapsUrl = null;
+    userCoordinates = null;
     locationText.textContent = 'Ubicación no incluida';
     customLocationInput.style.display = 'none';
+}
+
+// Función para validar y formatear número de teléfono
+function formatPhoneForValidation(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Para números mexicanos:
+    if (cleaned.length === 10) {
+        // Número local de 10 dígitos: 4427128200
+        return cleaned;
+    } else if (cleaned.length === 12 && cleaned.startsWith('52')) {
+        // Número con código de país: 524427128200
+        return cleaned;
+    } else if (cleaned.length === 13 && cleaned.startsWith('521')) {
+        // Número con código de país y prefijo móvil: 5214427128200
+        return cleaned;
+    }
+    
+    return null;
 }
 
 function getUserLocation() {
@@ -270,7 +314,7 @@ function sendWhatsappMessage() {
     // Validar y formatear teléfono del usuario
     const formattedUserPhone = formatPhoneForValidation(userPhone);
     if (!formattedUserPhone) {
-        alert('Por favor ingrese un número de teléfono válido (10 dígitos). Ejemplo: 3331234567');
+        alert('Por favor ingrese un número de teléfono válido (10 dígitos). Ejemplo: 4427128200');
         return;
     }
     
@@ -323,18 +367,3 @@ function sendWhatsappMessage() {
         closeWhatsappModal();
     }, 500);
 }
-
-// Detectar si FontAwesome está cargado, si no, mostrar el SVG
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si FontAwesome está cargado después de un tiempo
-    setTimeout(function() {
-        const whatsappIcon = document.querySelector('.whatsapp-font');
-        if (!whatsappIcon || getComputedStyle(whatsappIcon).display === 'none') {
-            // FontAwesome no está cargado, asegurarnos de que el SVG sea visible
-            const whatsappSvg = document.querySelector('.whatsapp-svg');
-            if (whatsappSvg) {
-                whatsappSvg.style.display = 'block';
-            }
-        }
-    }, 2000);
-});
