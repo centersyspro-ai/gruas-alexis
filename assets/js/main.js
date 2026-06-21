@@ -1,14 +1,3 @@
-// ================================
-// CONFIGURACIÓN - DATOS DEL NEGOCIO
-// ================================
-const BUSINESS_CONFIG = {
-    // Número de WhatsApp principal (formato internacional: 52 + 10 dígitos)
-    whatsappNumber: '524427128200', // Número real: 52 442 712 8200
-    
-    // Nombre del negocio
-    businessName: 'Grúas Alexis',
-};
-
 // Elementos del DOM
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
@@ -27,11 +16,9 @@ const customLocationRadio = document.getElementById('customLocation');
 const noLocationRadio = document.getElementById('noLocation');
 const manualLocation = document.getElementById('manualLocation');
 
-// Variables globales para ubicación
+// Variables
 let userLocation = null;
 let userAddress = null;
-let userMapsUrl = null;
-let userCoordinates = null;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -91,18 +78,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         sendWhatsappMessage();
     });
-    
-    // Verificar si FontAwesome está cargado, si no, mostrar el SVG
-    setTimeout(function() {
-        const whatsappIcon = document.querySelector('.whatsapp-font');
-        if (!whatsappIcon || getComputedStyle(whatsappIcon).display === 'none') {
-            // FontAwesome no está cargado, asegurarnos de que el SVG sea visible
-            const whatsappSvg = document.querySelector('.whatsapp-svg');
-            if (whatsappSvg) {
-                whatsappSvg.style.display = 'block';
-            }
-        }
-    }, 2000);
 });
 
 // Funciones
@@ -121,29 +96,8 @@ function resetForm() {
     whatsappForm.reset();
     userLocation = null;
     userAddress = null;
-    userMapsUrl = null;
-    userCoordinates = null;
     locationText.textContent = 'Ubicación no incluida';
     customLocationInput.style.display = 'none';
-}
-
-// Función para validar y formatear número de teléfono
-function formatPhoneForValidation(phone) {
-    const cleaned = phone.replace(/\D/g, '');
-    
-    // Para números mexicanos:
-    if (cleaned.length === 10) {
-        // Número local de 10 dígitos: 4427128200
-        return cleaned;
-    } else if (cleaned.length === 12 && cleaned.startsWith('52')) {
-        // Número con código de país: 524427128200
-        return cleaned;
-    } else if (cleaned.length === 13 && cleaned.startsWith('521')) {
-        // Número con código de país y prefijo móvil: 5214427128200
-        return cleaned;
-    }
-    
-    return null;
 }
 
 function getUserLocation() {
@@ -152,7 +106,7 @@ function getUserLocation() {
         return;
     }
     
-    locationText.innerHTML = '<span class="loading-location">Obteniendo ubicación...</span>';
+    locationText.textContent = 'Obteniendo ubicación...';
     
     navigator.geolocation.getCurrentPosition(
         // Éxito
@@ -162,77 +116,32 @@ function getUserLocation() {
             userLocation = { lat, lng };
             
             try {
-                // Obtener dirección en formato coloquial mexicano con enlace a Maps
-                const locationData = await getMexicanAddress(lat, lng);
-                userAddress = locationData.text;
-                userMapsUrl = locationData.url;
-                userCoordinates = locationData.coordinates;
-                
-                // Mostrar información con enlace a Google Maps
-                locationText.innerHTML = `
-                    <div class="location-info">
-                        <div class="location-text">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span><strong>Ubicación obtenida:</strong> ${userAddress}</span>
-                        </div>
-                        <div class="location-link">
-                            <a href="${userMapsUrl}" target="_blank" class="maps-link">
-                                <i class="fas fa-external-link-alt"></i> Ver en Google Maps
-                            </a>
-                            <small>Coordenadas: ${userCoordinates}</small>
-                        </div>
-                    </div>
-                `;
+                // Obtener dirección en formato coloquial mexicano
+                userAddress = await getMexicanAddress(lat, lng);
+                locationText.textContent = `Ubicación obtenida: ${userAddress}`;
                 sendLocationRadio.checked = true;
             } catch (error) {
                 console.error('Error al obtener dirección:', error);
-                // Crear enlace de Google Maps con las coordenadas
-                const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
-                userMapsUrl = googleMapsUrl;
-                userCoordinates = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-                
-                locationText.innerHTML = `
-                    <div class="location-info">
-                        <div class="location-text">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span><strong>Ubicación:</strong> Coordenadas obtenidas</span>
-                        </div>
-                        <div class="location-link">
-                            <a href="${googleMapsUrl}" target="_blank" class="maps-link">
-                                <i class="fas fa-external-link-alt"></i> Ver en Google Maps
-                            </a>
-                            <small>Coordenadas: ${userCoordinates}</small>
-                        </div>
-                    </div>
-                `;
+                locationText.textContent = `Coordenadas obtenidas: ${lat.toFixed(6)}, ${lng.toFixed(6)}. No se pudo obtener dirección específica.`;
                 sendLocationRadio.checked = true;
             }
         },
         // Error
         function(error) {
             console.error('Error obteniendo ubicación:', error);
-            let errorMessage = "Error obteniendo ubicación.";
-            
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    errorMessage = "Permiso de ubicación denegado. Puede escribir su ubicación manualmente.";
+                    locationText.textContent = "Permiso de ubicación denegado. Puede escribir su ubicación manualmente.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    errorMessage = "Información de ubicación no disponible.";
+                    locationText.textContent = "Información de ubicación no disponible.";
                     break;
                 case error.TIMEOUT:
-                    errorMessage = "Tiempo de espera agotado al obtener la ubicación.";
+                    locationText.textContent = "Tiempo de espera agotado al obtener la ubicación.";
                     break;
                 default:
-                    errorMessage = "Error desconocido al obtener la ubicación.";
+                    locationText.textContent = "Error desconocido al obtener la ubicación.";
             }
-            
-            locationText.innerHTML = `
-                <div class="location-error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>${errorMessage}</span>
-                </div>
-            `;
         },
         // Opciones
         {
@@ -256,12 +165,10 @@ async function getMexicanAddress(lat, lng) {
         
         const data = await response.json();
         
-        let mexicanAddress = '';
-        let googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
-        
         if (data && data.address) {
             const address = data.address;
             // Formato coloquial mexicano: calle, colonia, municipio, estado
+            let mexicanAddress = '';
             
             if (address.road) mexicanAddress += address.road;
             if (address.suburb) mexicanAddress += `, ${address.suburb}`;
@@ -273,30 +180,14 @@ async function getMexicanAddress(lat, lng) {
             }
             if (address.state) mexicanAddress += `, ${address.state}`;
             
-            return {
-                text: mexicanAddress || `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-                url: googleMapsUrl,
-                coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-                rawAddress: address
-            };
+            return mexicanAddress || 'Ubicación obtenida, pero no se pudo formatear correctamente';
         } else {
-            return {
-                text: `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-                url: googleMapsUrl,
-                coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-                rawAddress: null
-            };
+            return `Cerca de las coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     } catch (error) {
         console.error('Error en geocodificación inversa:', error);
         // Fallback a coordenadas simples
-        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
-        return {
-            text: `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-            url: googleMapsUrl,
-            coordinates: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-            rawAddress: null
-        };
+        return `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 }
 
@@ -311,38 +202,22 @@ function sendWhatsappMessage() {
         return;
     }
     
-    // Validar y formatear teléfono del usuario
-    const formattedUserPhone = formatPhoneForValidation(userPhone);
-    if (!formattedUserPhone) {
-        alert('Por favor ingrese un número de teléfono válido (10 dígitos). Ejemplo: 4427128200');
-        return;
-    }
-    
-    // Número de teléfono del negocio
-    const businessPhone = BUSINESS_CONFIG.whatsappNumber;
+    // Formatear número de teléfono (eliminar espacios, guiones, etc.)
+    const formattedPhone = userPhone.replace(/\D/g, '');
     
     // Determinar el texto de ubicación según la opción seleccionada
-    let locationContent = '';
+    let locationText = '';
     
-    if (sendLocationRadio.checked && userAddress && userMapsUrl) {
-        // Incluir dirección en texto y enlace a Google Maps
-        locationContent = `\n📍 *Mi ubicación:* ${userAddress}\n🗺️ *Ver en Google Maps:* ${userMapsUrl}`;
-        if (userCoordinates) {
-            locationContent += `\n📌 *Coordenadas:* ${userCoordinates}`;
-        }
+    if (sendLocationRadio.checked && userAddress) {
+        locationText = `\n📍 Mi ubicación: ${userAddress}`;
     } else if (customLocationRadio.checked && manualLocation.value.trim()) {
-        // Para ubicación manual, también podemos crear un enlace de búsqueda en Google Maps
-        const manualLocationText = manualLocation.value.trim();
-        const encodedLocation = encodeURIComponent(manualLocationText + ', San Diego de la Unión, Guanajuato');
-        const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-        
-        locationContent = `\n📍 *Mi ubicación:* ${manualLocationText}\n🗺️ *Buscar en Google Maps:* ${mapsSearchUrl}`;
+        locationText = `\n📍 Mi ubicación: ${manualLocation.value.trim()}`;
     } else {
-        locationContent = '\n📍 *Ubicación:* No se proporcionó ubicación específica.';
+        locationText = '\n📍 No se proporcionó ubicación específica.';
     }
     
     // Crear mensaje para WhatsApp
-    const whatsappMessage = `Hola, soy *${userName}*. Necesito servicio de grúa.\n\n*Detalles del servicio:* ${userMessage}\n\n*Teléfono de contacto:* ${formattedUserPhone}${locationContent}\n\nEste mensaje fue enviado desde la página web de ${BUSINESS_CONFIG.businessName}.`;
+    const whatsappMessage = `Hola, soy *${userName}*. Necesito servicio de grúa.\n\n*Detalles:* ${userMessage}\n\n*Teléfono de contacto:* ${userPhone}${locationText}\n\nEste mensaje fue enviado desde la página web de Grúas Alexis.`;
     
     // Codificar el mensaje para URL
     const encodedMessage = encodeURIComponent(whatsappMessage);
@@ -351,9 +226,12 @@ function sendWhatsappMessage() {
     const isAndroid = /Android/i.test(navigator.userAgent);
     let whatsappUrl;
     
+    // Número de teléfono de Grúas Alexis (cambiar por el número real)
+    const businessPhone = '524429999999';
+    
     if (isAndroid) {
         // Para Android: usar el esquema intent de WhatsApp
-        whatsappUrl = `https://wa.me/${businessPhone}?text=${encodedMessage}`;
+        whatsappUrl = `whatsapp://send?phone=${businessPhone}&text=${encodedMessage}`;
     } else {
         // Para navegadores web: usar la versión web de WhatsApp
         whatsappUrl = `https://web.whatsapp.com/send?phone=${businessPhone}&text=${encodedMessage}`;
@@ -367,3 +245,18 @@ function sendWhatsappMessage() {
         closeWhatsappModal();
     }, 500);
 }
+
+// Detectar si FontAwesome está cargado, si no, mostrar el SVG
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si FontAwesome está cargado después de un tiempo
+    setTimeout(function() {
+        const whatsappIcon = document.querySelector('.whatsapp-font');
+        if (!whatsappIcon || getComputedStyle(whatsappIcon).display === 'none') {
+            // FontAwesome no está cargado, asegurarnos de que el SVG sea visible
+            const whatsappSvg = document.querySelector('.whatsapp-svg');
+            if (whatsappSvg) {
+                whatsappSvg.style.display = 'block';
+            }
+        }
+    }, 2000);
+});
