@@ -1,0 +1,21 @@
+{
+  "name": "Grúas Alexis - Servicio de Grúas",
+  "short_name": "Grúas Alexis",
+  "description": "Servicio confiable de grúas en San Diego de la Unión, Guanajuato. Auxilio vial las 24 horas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#e67e22",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
